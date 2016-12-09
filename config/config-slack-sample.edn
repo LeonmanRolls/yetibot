@@ -1,0 +1,14 @@
+{:doc 
+ "Rename this file to config.edn
+  Get your slack API key here: my.slack.com/services/new/bot.
+  Specify your server's url and an open port.
+  lein run
+  Start talking to your chatbot on slack!"
+ :yetibot
+ {:url "<Your server's url and port>"
+  :logging {:log-level :debug}
+  :db {:datomic-url "datomic:mem://yetibot"}
+  :adapters [{:name "company-slack"
+              :type :slack
+              :token "<Your Slack API Key>"}]}}
+
