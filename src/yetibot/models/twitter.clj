@@ -1,4 +1,5 @@
 (ns yetibot.models.twitter
+  (:refer-clojure :exclude [update])
   (:require
     [taoensso.timbre :refer [info warn error]]
     [clj-http.client :as client]
