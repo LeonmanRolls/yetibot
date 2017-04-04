@@ -1,12 +1,26 @@
 (ns yetibot.api.jira
   (:require
     [taoensso.timbre :refer [info warn error]]
+    [schema.core :as sch]
+    [yetibot.core.schema :refer [non-empty-str]]
     [clojure.string :as s]
     [clj-http.client :as client]
     [clojure.core.memoize :as memo]
-    [yetibot.core.config :refer [get-config conf-valid?]]
+    [yetibot.core.config :refer [get-config]]
     [yetibot.core.util.http :refer [get-json fetch]]
     [clj-time [format :refer [formatter formatters show-formatters parse unparse]]]))
+
+(def jira-schema
+  {:domain non-empty-str
+   :user non-empty-str
+   :password non-empty-str
+   :projects [{:key non-empty-str
+               (sch/optional-key :default) {:version {:id non-empty-str}}}]
+   (sch/optional-key :default) {:issue {:type {:id non-empty-str}}
+                                :project {:key non-empty-str}}
+   (sch/optional-key :max) {:results non-empty-str}
+   :subtask {:issue {:type {:id non-empty-str}}}})
+
 
 ;; config
 
@@ -14,31 +28,35 @@
   "Settings for the current channel, bound by yetibot.commands.jira"
   nil)
 
-(defn config [] (get-config :yetibot :api :jira))
+(defn config [] (:value (get-config jira-schema [:jira])))
 
-(defn configured? [] (conf-valid? (config)))
+(defn configured? [] (config))
 
-(defn projects [] (->> (config) :projects))
+(defn projects [] (:projects (config)))
 
-(defn project-for-key [k] (get (projects) k))
+(defn project-for-key [k] (first (filter #(= (:key %) k) (projects))))
 
-(defn project-keys [] (keys (projects)))
+(defn project-keys [] (map :key (projects)))
 
-(defn project-keys-str [] (->> (project-keys) (s/join ",")))
+(defn project-keys-str [] (s/join "," (project-keys)))
 
-(defn default-version-id [project-key] (:default-version-id (project-for-key project-key)))
+(defn default-version-id [project-key] (-> (project-for-key project-key)
+                                           :default :version :id))
 
 (defn default-project-key [] (or *jira-project*
-                                 (:default-project-key (config))
+                                 (-> (config) :default :project :key)
                                  (first (project-keys))))
 
 (defn default-project [] (project-for-key (default-project-key)))
 
-(defn max-results [] (or (:max-results (config)) 10))
+(defn max-results []
+  (if-let [mr (-> (config) :max :results)]
+    (read-string mr)
+    10))
 
-(defn sub-task-issue-type-id [] (:sub-task-issue-type-id (config)))
+(defn sub-task-issue-type-id [] (-> (config) :subtask :issue :type :id ))
 
-(defn default-issue-type-id [] (:default-issue-type-id (config)))
+(defn default-issue-type-id [] (-> (config) :default :issue :type :id))
 
 (defn base-uri [] (str "https://" (:domain (config))))
 
@@ -74,7 +92,7 @@
 
 (defn format-issue [issue-data]
   (let [fs (:fields issue-data)]
-    [(-> fs :summary)
+    [(:summary fs)
      (str "Assignee: " (-> fs :assignee :displayName))
      (str "Status: " (-> fs :status :name))
      (url-from-key (:key issue-data))]))
@@ -84,14 +102,14 @@
     (format "[%s] [%s] %s %s"
             (or (-> fs :assignee :name) "unassigned")
             (-> fs :status :name)
-            (-> fs :summary)
+            (:summary fs)
             (url-from-key (:key issue-data)))))
 
 (defn format-comment [c]
   (str "📞 "
        (-> c :author :name) " "
        (parse-and-format-date-string (:created c))
-       ": " (-> c :body)))
+       ": " (:body c)))
 
 (defn format-worklog-item [w]
   (str "🚧 " (-> w :author :name) " " (:timeSpent w) ": " (:comment w)
@@ -109,7 +127,7 @@
   (str "📎 "
        (-> a :author :name) " "
        (parse-and-format-date-string (:created a))
-       ": " (-> a :content)))
+       ": " (:content a)))
 
 (defn format-attachments [issue-data]
   (when-let [attachments (-> issue-data :fields :attachment)]
@@ -121,8 +139,8 @@
   (let [fs (:fields issue-data)]
     (flatten
       (keep identity
-            [(str (:key issue-data) " ↪︎ " (-> fs :status :name) " ↪︎ " (-> fs :summary))
-             (-> fs :description)
+            [(str (:key issue-data) " ↪︎ " (-> fs :status :name) " ↪︎ " (:summary fs))
+             (:description fs)
              (s/join
                "  "
                [(str "👷 " (-> fs :assignee :name))
@@ -130,7 +148,7 @@
              (s/join
                " "
                [(str "❗️ Priority: " (-> fs :priority :name))
-                (str " ✅ Fix version: " (s/join ", " (map :name (-> fs :fixVersions))))])
+                (str " ✅ Fix version: " (s/join ", " (map :name (:fixVersions fs))))])
              (str "🕐 Created: " (parse-and-format-date-string (:created fs))
                   "  🕗 Updated: " (parse-and-format-date-string (:updated fs)))
              (map format-comment (-> fs :comment :comments))
@@ -348,5 +366,5 @@
 (defn recent [] (search (projects-jql)))
 
 ;; prime cache
-
-(future (all-components))
+;; todo: move into a start fn
+;; (future (all-components))

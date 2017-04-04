@@ -1,24 +1,67 @@
 # yetibot changelog
 
-## 1.0.0
+## 0.4.7
 
-Yetibot 1.0 is here! 1.0 brings non-backward compatible changes.
+- Fixup linting issues for markdown, shell and Clojure
+- Upgrade to yetibot.core 0.4.7 for fixes on creating mutable config when not
+  present
 
-## Non-backward Compatible Changes
+## 0.4.6
 
-- *Config*: main config is now immutable, and can be provided in
-  12-Factor-compatible methods, such as env-vars. As a result, is it also flat
-  KV pairs now, which are exploded into nested maps by
-  [dec](https://github.com/devth/dec).
+- Renamed `react` command to `replygif` to make way for Slack `react` command.
+  This might be removed in the future since it's easily aliasable with `scrape`.
+- Moved `nil` to `yetibot.core`
+- Upgrade to `yetibot.core "0.4.6"`
 
-  See the new [profiles.sample.clj](profiles.sample.clj)
+## 0.4.5
 
-- *Mutable config*: mutable config, such as which IRC rooms to join and
-  channel-specific settings has been extracted into a separate file that is
-  managed by Yetibot.
+- Upgrade to `yetibot.core "0.4.5"`
+
+## 0.4.4
+
+- Upgrade to `yetibot.core "0.4.4"`
+- Add `gh contributors since` to show contribution stats on a repo since given
+  date/time - [#595](https://github.com/devth/yetibot/issues/595)
+
+## 0.4.3
+
+- Use Chrome user agent for scrape - [#604](https://github.com/devth/yetibot/issues/604)
+- Upgrade to `yetibot.core "0.4.3"`
+
+## 0.4.2
+
+### Added
+
+- `json` command to parse json from text or from a url
+  [#601](https://github.com/devth/yetibot/issues/601)
+- `json path` subcommand to select from data structures via JsonPath
+
+## 0.4.1
+
+### Added
+
+- `scrape` command [#310](https://github.com/devth/yetibot/issues/310)
+- `meme popular` in terms of `scrape`
+
+## 0.4.0
+
+0.4.0 brings non-backward compatible changes, particularly around configuration
+refactoring.
+
+### Non-backward Compatible Changes
+
+- See [yetibot.core
+  CHANGELOG](https://github.com/devth/yetibot.core/blob/master/doc/CHANGELOG.md#040)
+  for info on configuration changes.
+
+- Upgraded to Clojure 1.8.0
+
+### Removed
 
 - Remove all uses of `config-for-ns` - this was never a good idea.
 
+- Removed Jenkins `add` and `remove` commands in favor of immutable
+  configuration and simplified code
 
 ## 0.1.74
 

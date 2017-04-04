@@ -6,3 +6,8 @@ engines:
     enabled: true
   kibit:
     enabled: true
+ratings:
+  paths:
+    - "**.clj"
+    - "**.md"
+    - "**.sh"
